@@ -23,8 +23,8 @@ class Kohana_ArmREST {
 	 * @return json
 	 */
 	public static function json($array = array())
-	{	
-		return (string) (isset($_REQUEST['callback'])) ? $_REQUEST['callback'] . '(' .  json_encode($array) . ')' : json_encode($array);
+	{
+		return $array ? (string) (isset($_REQUEST['callback'])) ? $_REQUEST['callback'] . '(' .  json_encode($array) . ')' : json_encode($array) : null;
 	}
 	
 	/**
@@ -37,7 +37,7 @@ class Kohana_ArmREST {
 	 */
 	public static function xml($array, $startElement = 'objects', $elements = 'object')
 	{
-		return (string) self::buildXMLData($array, $startElement, $elements);
+		return $array ? (string) self::buildXMLData($array, $startElement, $elements) : null;
 	}
 	
 	/**
@@ -50,45 +50,54 @@ class Kohana_ArmREST {
 	 */
 	public static function html($array)
 	{
-		$string = '';
-		
-		$render = function($array, &$string) use (&$render)
-		{	
-			foreach($array as $key => $value)
-			{
-				if (is_numeric($key))
+		if($array)
+		{
+			$string = '';
+			
+			$render = function($array, &$string) use (&$render)
+			{	
+				foreach($array as $key => $value)
 				{
-					if(is_array($value) and sizeof($value) > 0)
+					if (is_numeric($key))
 					{
-						$string .= "<li>\r\n<ul>\r\n";
-						$string .= $render($value, $string);
-						$string .= "</ul>\r\n</li>\r\n";
+						if(is_array($value) and sizeof($value) > 0)
+						{
+							$string .= "<li>\r\n<ul>\r\n";
+							$string .= $render($value, $string);
+							$string .= "</ul>\r\n</li>\r\n";
+						}
+						else
+						{
+							$string .= "<li>$value</li>\r\n";
+						}
 					}
 					else
 					{
-						$string .= "<li>$value</li>\r\n";
+						if(is_array($value) and sizeof($value) > 0)
+						{
+							$string .= "<li>$key:\r\n<ul>\r\n";
+							$string .= $render($value, $string);
+							$string .= "</ul>\r\n</li>\r\n";
+						}
+						else
+						{
+							$string .= "<li>$key: $value</li>\r\n";
+						}
 					}
 				}
-				else
-				{
-					if(is_array($value) and sizeof($value) > 0)
-					{
-						$string .= "<li>$key:\r\n<ul>\r\n";
-						$string .= $render($value, $string);
-						$string .= "</ul>\r\n</li>\r\n";
-					}
-					else
-					{
-						$string .= "<li>$key: $value</li>\r\n";
-					}
-				}
-			}
-			unset($key, $value);
-		};
-
-		$render($array, $string);
+				unset($key, $value);
+			};
+	
+			$render($array, $string);
+			
+			$string = "<ul>\r\n$string</ul>";
+		}
+		else
+		{
+			$string = null;
+		}
 		
-		return (string) "<ul>\r\n$string</ul>";
+		return $string;
 	}
 	
 	/**
@@ -101,19 +110,26 @@ class Kohana_ArmREST {
 	 */
 	public static function text($array)
 	{
-		$render = function($array, &$string = '') use (&$render)
+		if($array)
 		{
-			foreach($array as $key => $value)
+			$render = function($array, &$string = '') use (&$render)
 			{
-				$string .= (is_array($value) ? "\t" : "") . (is_numeric($key) ? '' : "$key:") . ( is_array($value) ? $render($value, $string) : $value) . "\n";
-			}
-		};
+				foreach($array as $key => $value)
+				{
+					$string .= (is_array($value) ? "\t" : "") . (is_numeric($key) ? '' : "$key:") . ( is_array($value) ? $render($value, $string) : $value) . "\n";
+				}
+			};
+			
+			$string = '';
+			
+			$render($array, $string);
+		}
+		else
+		{
+			$string = null;
+		}
 		
-		$string = '';
-		
-		$render($array, $string);
-		
-		return (string) $string;
+		return $string;
 	}
 	
 	/**

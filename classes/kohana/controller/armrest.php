@@ -132,6 +132,10 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 				throw new Http_Exception_404(ucfirst($this->_model)." doesn't exist");
 			}
 			
+			unset($object->id); //we don't need it - we know which page we requested
+			
+			$this->response->status(200);
+			
 			$this->output = array($object->as_array());
 		}
 		else
@@ -175,6 +179,8 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 				array_push($objects, UTF8::clean($object));
 			}
 			
+			$this->response->status(200);
+			
 			$this->output = $objects;
 		}
 	}
@@ -197,10 +203,14 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 		{
 			$object->save();
 			
+			$this->response->status(201);
+			
 			$this->output = $object->as_array();
 		}
 		else
 		{
+			$this->response->status(400);
+			
 			$this->output = array($object->validation()->errors());
 		}
 	}
@@ -230,7 +240,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			$putdata .= $data;
         }
 		
-		$array = $putdata ? json_decode($putdata,true) : array();
+		$array = $putdata ? json_decode($putdata,true) : array(); //TODO: Handle XML and other format requests
 		
 		$object->values($array);
 		
@@ -238,10 +248,14 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 		{
 			$object->update();
 			
+			unset($object->id); //we don't need it - we know which page we requested
+			
 			$this->output = $object->as_array();
 		}
 		else
 		{
+			$this->response->status(409);
+			
 			$this->output = array('error' => $object->validation()->errors());
 		}
 	}
@@ -263,11 +277,18 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			throw new Http_Exception_404(ucfirst($this->_model)." doesn't exist");
 		}
 		
-		$id = $object->id;
+		if(0===1) // If user isn't allowed to delete
+		{
+			$object->delete();
+			
+			$this->response->status(405);	
+		}
+		else
+		{
+			$this->response->status(204);
+		}
 		
-		$object->delete();
-		
-		$this->output = array('response' => ucfirst($this->_model)." id:$id deleted successfully");
+		$this->output = false;
 	}
 	
 	/**
