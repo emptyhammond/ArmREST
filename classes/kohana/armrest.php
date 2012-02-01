@@ -35,9 +35,9 @@ class Kohana_ArmREST {
 	 * @param array $array (default: array())
 	 * @return xml
 	 */
-	public static function xml($array, $startElement = 'objects', $elements = 'object')
+	public static function xml($array, $startElement = 'objects', $elements = 'object', $collection)
 	{
-		return $array ? (string) self::buildXMLData($array, $startElement, $elements) : null;
+		return $array ? (string) self::buildXMLData($array, $startElement, $elements, null, null, $collection) : null;
 	}
 	
 	/**
@@ -142,7 +142,7 @@ class Kohana_ArmREST {
 	 * @return string XML String containig values
 	 * @return mixed Boolean false on failure, string XML result on success
 	 */
-	public static function buildXMLData($data, $startElement = 'objects', $elements = 'object', $xml_version = '1.0', $xml_encoding = 'UTF-8')
+	public static function buildXMLData($data, $startElement = 'objects', $elements = 'object', $xml_version = '1.0', $xml_encoding = 'UTF-8', $collection = true)
 	{
 		if(!is_array($data)){
 			$err = 'Invalid variable type supplied, expected array not found on line '.__LINE__." in Class: ".__CLASS__." Method: ".__METHOD__;
@@ -154,7 +154,8 @@ class Kohana_ArmREST {
 		$xml = new XmlWriter();
 		$xml->openMemory();
 		$xml->startDocument($xml_version, $xml_encoding);
-		if(sizeof($data) === 1) 
+		
+		if( ! $collection) 
 		{
 			$xml->startElement($elements);
 			$data = $data[0];
@@ -180,7 +181,15 @@ class Kohana_ArmREST {
 					$xml->endElement();
 					continue;
 				}
-				$xml->writeElement($key, UTF8::clean($value));
+				if(is_string($value) && strlen($value) > 255)
+				{
+					$xml->writeElement($key, UTF8::clean($value));
+				}
+				else
+				{
+					$xml->writeElement($key, UTF8::clean($value));
+				}
+				
 			}
 		}
 		write($xml, $data, $elements);

@@ -60,7 +60,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 	 * 
 	 * (default value: TRUE)
 	 * 
-	 * @var mixed
+	 * @var boolean
 	 * @access protected
 	 */
 	protected $_accept_strict = TRUE;
@@ -76,7 +76,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 	/**
 	 * _table
 	 * 
-	 * @var mixed
+	 * @var string
 	 * @access protected
 	 */
 	protected $_table;
@@ -84,11 +84,18 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 	/**
 	 * _model
 	 * 
-	 * @var mixed
+	 * @var string
 	 * @access protected
 	 */
 	protected $_model;
 	
+	/**
+	 * _collection
+	 * 
+	 * @var boolean
+	 * @access protected
+	 */
+	protected $_collection = true;
 	
 	/**
 	 * before function.
@@ -123,23 +130,132 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 	 */
 	public function action_index()
 	{
-		if($this->request->param('id'))
+		if ( ($id = $this->request->param('id')) && ($relation_id = $this->request->param('relation_id')) )
 		{
-			$object = ORM::factory($this->_model, $this->request->param('id'));
+			/*
+			A specific relation has been requested.
+			Get the relation based on the relation_id.
+			Checking if it exists and if it has a relationship with the base resource.
+			*/
+			
+			//check that base resource exists
+			$object = ORM::factory($this->_model, $id);
+			
+			//check base resource is loaded
+			if ( ! $object->loaded() )
+			{
+				throw new Http_Exception_400('Bad Request');
+			}
+			
+			//reset  _table and _model to required relation resource
+			$this->_table = $this->request->param('relation');
+			
+			$this->_model = Inflector::singular($this->_table);
+			
+			//try and get relation based on request
+			$relation = ORM::factory($this->_model, $relation_id);
+			
+			//if relation resource not loaded throw 400
+			if ( ! $relation->loaded() )
+			{
+				throw new Http_Exception_400('Bad Request');
+			}
+			
+			//if base resource doesn't have a relationship, throw a 400
+			if ( ! $object->has($this->_table, $relation))
+			{
+				throw new Http_Exception_400('Bad Request');
+			}
+			
+			unset($relation->id); //we don't need it - we know which resource we requested
+			
+			$this->_collection = false;
+			
+			$this->response->status(200); //response with a 200
+			
+			$this->output = array($relation->as_array()); //output = array of requested relation resource
+		}
+		elseif ( ($relation = $this->request->param('relation')) && ! $this->request->param('relation_id'))
+		{
+			/*
+			A collection of relations has been requested.
+			Check that relationship exists.
+			*/
+			
+			$resource = ORM::factory($this->_model, $this->request->param('id'));
+			
+			$this->_table = $relation;
+			
+			$this->_model = Inflector::singular($this->_table);
+			
+			$columns = ORM::factory($this->_model)->list_columns();
+			
+			$query = $resource->{$this->request->param('relation')};
+			
+			foreach(array_intersect_key($_GET, $columns) as $key => $value)
+			{
+				$query->and_where($key, '=', $value);
+			}
+			
+			if(isset($_GET['order']))
+			{	
+				foreach($_GET['order'] as $key => $value)
+				{
+					$query->order_by($key, $value);
+				}
+			}
+			
+			if(isset($_GET['limit']))
+			{
+				$query->limit($_GET['limit']);
+			}
+			
+			$objects = array();
+			
+			if ($query->loaded())
+			{
+				array_push($objects, UTF8::clean($query->as_array()));
+			}
+			else
+			{
+				foreach($query->find_all() as $relation)
+				{
+					array_push($objects, UTF8::clean($relation->as_array()));
+				}
+			}
+
+			$this->response->status(200);
+			
+			$this->output = $objects;
+		}
+		elseif ($id = $this->request->param('id') && ! $this->request->param('relation_id'))
+		{
+			/*
+			A specific resource has been requested.
+			Return resource if it exists.
+			*/
+		
+			$object = ORM::factory($this->_model, $id);
 					
 			if( ! $object->loaded() )
 			{
-				throw new Http_Exception_404(ucfirst($this->_model)." doesn't exist");
+				throw new Http_Exception_400('Bad Request');
 			}
 			
 			unset($object->id); //we don't need it - we know which page we requested
 			
+			$this->_collection = false;
+						
 			$this->response->status(200);
 			
 			$this->output = array($object->as_array());
 		}
 		else
 		{
+			/*
+			A collection of resources has been requested.
+			*/
+
 			$objects = array();
 			
 			$object = ORM::factory($this->_model);
@@ -229,7 +345,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 		
 		if( ! $object->loaded() )
 		{
-			throw new Http_Exception_404(ucfirst($this->_model)." doesn't exist");
+			throw new Http_Exception_400('Bad Request');
 		}
 				
 		$putdata = '';
@@ -274,7 +390,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 		
 		if( ! $object->loaded() )
 		{
-			throw new Http_Exception_404(ucfirst($this->_model)." doesn't exist");
+			throw new Http_Exception_400('Bad Request');
 		}
 		
 		if(0===1) // If user isn't allowed to delete
@@ -310,7 +426,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 		elseif(in_array($mime = 'application/xml', $types) or in_array($mime = 'text/xml', $types))
 		{
 			$this->response->headers('Content-Type',$mime);
-			$this->response->body(ArmREST::xml($this->output, $this->_table, $this->_model));
+			$this->response->body(ArmREST::xml($this->output, $this->_table, $this->_model, $this->_collection));
 		}		
 		elseif(in_array('text/html', $types))
 		{	
