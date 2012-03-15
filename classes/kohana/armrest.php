@@ -14,6 +14,19 @@
  */
 class Kohana_ArmREST {
 	
+	protected static $_config;
+	
+	private function __construct()
+	{			
+		self::$_config = Kohana::$config->load('armrest');
+	}
+
+	public static function types()
+	{
+		//return self::$_config['types'];
+		return Kohana::$config->load('armrest.types');
+	}
+	
 	/**
 	 * json function.
 	 * 
@@ -144,7 +157,8 @@ class Kohana_ArmREST {
 	 */
 	public static function buildXMLData($data, $startElement = 'objects', $elements = 'object', $xml_version = '1.0', $xml_encoding = 'UTF-8', $collection = true)
 	{
-		if(!is_array($data)){
+		if (!is_array($data))
+		{
 			$err = 'Invalid variable type supplied, expected array not found on line '.__LINE__." in Class: ".__CLASS__." Method: ".__METHOD__;
 			trigger_error($err);
 			if($this->_debug) echo $err;
@@ -165,33 +179,62 @@ class Kohana_ArmREST {
 			$xml->startElement($startElement);
 		}
 		
+		$xml->startAttribute('xmlns');
+		$xml->text("http://www.w3.org/2005/Atom");
+		$xml->endAttribute();
+		
 		/**
 		* Write XML as per Associative Array
 		* @param object $xml XMLWriter Object
 		* @param array $data Associative Data Array
 		*/
-		function write(XMLWriter $xml, $data, $elements){
-			foreach($data as $key => $value){
-				
+		function write(XMLWriter $xml, $data, $elements, $attributes = false)
+		{
+			foreach($data as $key => $value)
+			{	
 				if (is_numeric($key)) $key = $elements;
 				
-				if(is_array($value)){
-					$xml->startElement($key);
-					write($xml, UTF8::clean($value), $elements);
+				if(is_array($value))
+				{
+					if ($key === 'link')
+					{
+						$xml->startElement('atom:link');
+						
+						write($xml, UTF8::clean($value), $elements, true);
+					}
+					else
+					{
+						$xml->startElement($key);
+						
+						write($xml, UTF8::clean($value), $elements);
+					}
+					
 					$xml->endElement();
+					
 					continue;
 				}
-				if(is_string($value) && strlen($value) > 255)
+				
+				if ($attributes)
 				{
+					// Atrributes flag has been set so add key=>value pairs as attributes
+					$xml->startAttribute($key);
+					$xml->text($value);
+					$xml->endAttribute();
+				}
+				elseif (is_string($value) && strlen($value) > 255)
+				{
+					//CDATA
 					$xml->writeElement($key, UTF8::clean($value));
 				}
 				else
 				{
+					//Just write it
 					$xml->writeElement($key, UTF8::clean($value));
 				}
 				
 			}
 		}
+		
 		write($xml, $data, $elements);
 		
 		$xml->endElement();//write end element

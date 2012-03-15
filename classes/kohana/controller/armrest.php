@@ -24,14 +24,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 	 * @var mixed
 	 * @access protected
 	 */
-	protected $_accept = array(
-		'text/plain',
-		'text/html',
-		'text/javascript',
-		'application/json',
-		'application/xml',
-		'text/xml'
-	);
+	protected $_accept;
 	
 	/**
 	 * _accept_lang
@@ -39,10 +32,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 	 * @var mixed
 	 * @access protected
 	 */
-	protected $_accept_lang = array(
-		'en_US',
-		'en_GB'
-	);
+	protected $_accept_lang;
 	
 	/**
 	 * _accept_charset
@@ -50,10 +40,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 	 * @var mixed
 	 * @access protected
 	 */
-	protected $_accept_charset = array(
-		'utf-8',
-		'ISO-8859-1'
-	);
+	protected $_accept_charset;
 	
 	/**
 	 * _accept_strict
@@ -63,7 +50,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 	 * @var boolean
 	 * @access protected
 	 */
-	protected $_accept_strict = TRUE;
+	protected $_accept_strict;
 	
 	/**
 	 * output
@@ -96,6 +83,29 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 	 * @access protected
 	 */
 	protected $_collection = true;
+	
+	/**
+	 * __construct function.
+	 * 
+	 * @access public
+	 * @param Request $request
+	 * @param Response $response
+	 * @param array $accept (default: NULL)
+	 * @param array $accept_charset (default: NULL)
+	 * @param array $accept_language (default: NULL)
+	 * @param mixed $accept_strict (default: FALSE)
+	 * @return void
+	 */
+	public function __construct(Request $request, Response $response, array $accept = NULL,array $accept_charset = NULL, array $accept_language = NULL, $accept_strict = FALSE)
+	{	
+		$this->_config = Kohana::$config->load('armrest');
+		$this->_accept = $this->_config['types'];
+		$this->_accept_langs = $this->_config['langs'];
+		$this->_accept_charset = $this->_config['charset'];
+		$this->_accept_strict = $this->_config['strict'];
+		
+		parent::__construct($request, $response, $accept, $accept_charset, $accept_language, $accept_strict);
+	}
 	
 	/**
 	 * before function.
@@ -169,11 +179,14 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			
 			unset($relation->id); //we don't need it - we know which resource we requested
 			
+			$link = array('link' => array('rel' => Route::url('armrest.rels', array('id' => 'self'), true), 'href' => Route::url('armrest', array('controller' => $this->_table, 'id' => $relation->id), true)));
+			
 			$this->_collection = false;
 			
 			$this->response->status(200); //response with a 200
+			Log::instance()->add(Log::INFO,'MESSAGE HERE');
 			
-			$this->output = array($relation->as_array()); //output = array of requested relation resource
+			$this->output = array(array_merge($relation->as_array(), $link)); //output = array of requested relation resource
 		}
 		elseif ( ($relation = $this->request->param('relation')) && ! $this->request->param('relation_id'))
 		{
@@ -219,12 +232,16 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			else
 			{
 				foreach($query->find_all() as $relation)
-				{
-					array_push($objects, UTF8::clean($relation->as_array()));
+				{	
+					$link = array('link' => array('rel' => Route::url('armrest.rels', array('id' => 'self'), true), 'href' => Route::url('armrest', array('controller' => $this->_table, 'id' => $relation->id), true)));
+					
+					array_push($objects, UTF8::clean(array_merge_recursive($relation->as_array(), $link)));
 				}
+				unset($link, $relation);
 			}
 
 			$this->response->status(200);
+			Log::instance()->add(Log::INFO,'MESSAGE HERE');
 			
 			$this->output = $objects;
 		}
@@ -244,11 +261,14 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			
 			unset($object->id); //we don't need it - we know which page we requested
 			
+			$link = array('link' => array('rel' => Route::url('armrest.rels', array('id' => 'self'), true), 'href' => Route::url('armrest', array('controller' => $this->_table, 'id' => $id), true)));
+			
 			$this->_collection = false;
 						
 			$this->response->status(200);
+			Log::instance()->add(Log::INFO,'MESSAGE HERE');
 			
-			$this->output = array($object->as_array());
+			$this->output = array(array_merge($object->as_array(), $link));
 		}
 		else
 		{
@@ -264,10 +284,16 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			
 			if(isset($_GET['fields']))
 			{
+				$query->select('id');
+				
 				foreach(explode(',', $_GET['fields']) as $field)
 				{
 					$query->select($field);
 				}
+			}
+			else
+			{
+				$query->select('*');
 			}
 			
 			$query->from($this->_table);
@@ -292,12 +318,17 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			
 			foreach($query->execute()->as_array() as $object)
 			{
-				array_push($objects, UTF8::clean($object));
+				$link = array('link' => array('rel' => Route::url('armrest.rels', array('id' => 'self'), true), 'href' => Route::url('armrest', array('controller' => $this->_table, 'id' => $object['id']), true)));
+				
+				array_push($objects, UTF8::clean(array_merge($object, $link)));
 			}
 			
-			$this->response->status(200);
+			$link = array('link' => array('rel' => Route::url('armrest.rels', array('id' => 'self'), true), 'href' => Route::url('armrest', array('controller' => $this->_table), true)));
 			
-			$this->output = $objects;
+			$this->response->status(200);
+			Log::instance()->add(Log::INFO,'MESSAGE HERE');
+			
+			$this->output = array_merge($objects, $link);
 		}
 	}
 	
@@ -320,12 +351,14 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			$object->save();
 			
 			$this->response->status(201);
+			Log::instance()->add(Log::INFO,'MESSAGE HERE');
 			
-			$this->output = $object->as_array();
+			$this->output = UTF8::clean(array_merge($object->as_array(), $link = array('link' => array('rel' => Route::url('armrest.rels', array('id' => 'self'), true), 'href' => Route::url('armrest', array('controller' => $this->_table, 'id' => $object->id), true)))));
 		}
 		else
 		{
 			$this->response->status(400);
+			Log::instance()->add(Log::INFO,'MESSAGE HERE');
 			
 			$this->output = array($object->validation()->errors());
 		}
@@ -371,6 +404,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 		else
 		{
 			$this->response->status(409);
+			Log::instance()->add(Log::INFO,'MESSAGE HERE');
 			
 			$this->output = array('error' => $object->validation()->errors());
 		}
@@ -397,11 +431,13 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 		{
 			$object->delete();
 			
-			$this->response->status(405);	
+			$this->response->status(405);
+			Log::instance()->add(Log::INFO,'MESSAGE HERE');	
 		}
 		else
 		{
 			$this->response->status(204);
+			Log::instance()->add(Log::INFO,'MESSAGE HERE');
 		}
 		
 		$this->output = false;
@@ -419,13 +455,15 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 		
 		if( in_array($mime = 'text/javascript', $types) or in_array($mime = 'application/json', $types) )
 		{
+			$mime = 'text/javascript';
 			$this->response->headers('Content-Type', (isset($_REQUEST['callback']) ? 'text/javascript' : $mime) );			
 		
 			$this->response->body(ArmREST::json($this->output));
 		}			
 		elseif(in_array($mime = 'application/xml', $types) or in_array($mime = 'text/xml', $types))
-		{
+		{	
 			$this->response->headers('Content-Type',$mime);
+			
 			$this->response->body(ArmREST::xml($this->output, $this->_table, $this->_model, $this->_collection));
 		}		
 		elseif(in_array('text/html', $types))
@@ -438,7 +476,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 		{	
 			$this->response->headers('Content-Type', 'text/html' );			
 		
-			$this->response->body(ArmREST::text($this->outputs));
+			$this->response->body(ArmREST::text($this->output));
 		}
 		
 		parent::after();
