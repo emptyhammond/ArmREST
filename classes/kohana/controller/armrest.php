@@ -427,19 +427,16 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			throw new Http_Exception_400('Bad Request');
 		}
 		
-		if(0===1) // If user isn't allowed to delete
-		{
-			$object->delete();
-			
-			$this->response->status(405);
-			Log::instance()->add(Log::INFO,'MESSAGE HERE');	
-		}
-		else
-		{
-			$this->response->status(204);
-			Log::instance()->add(Log::INFO,'MESSAGE HERE');
-		}
-		
+		/** 
+		 * If user isn't allowed to delete
+		 * return $this->response->status(405);
+		 * and don't do the delete
+		 * else...
+		**/		
+		$object->delete();
+		$this->response->status(204);
+		Log::instance()->add(Log::INFO,'MESSAGE HERE');
+
 		$this->output = false;
 	}
 	
