@@ -480,7 +480,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 	{
 		$types = array_keys(Request::accept_type());
 		
-		if( in_array($mime = 'text/javascript', $types) or in_array($mime = 'application/json', $types) )
+		if( in_array($mime = 'application/javascript', $types) or in_array($mime = 'text/javascript', $types) or in_array($mime = 'application/json', $types) )
 		{
 			$mime = 'text/javascript';
 			$this->response->headers('Content-Type', (isset($_REQUEST['callback']) ? 'text/javascript' : $mime) );			
@@ -501,7 +501,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 		}
 		else // text/plain
 		{	
-			$this->response->headers('Content-Type', 'text/html' );			
+			$this->response->headers('Content-Type', 'text/plain' );			
 		
 			$this->response->body(ArmREST::text($this->output));
 		}

@@ -75,9 +75,7 @@ class Kohana_ArmREST {
 					{
 						if(is_array($value) and sizeof($value) > 0)
 						{
-							$string .= "<li>\r\n<ul>\r\n";
 							$string .= $render($value, $string);
-							$string .= "</ul>\r\n</li>\r\n";
 						}
 						else
 						{
