@@ -1,7 +1,7 @@
 <?php defined('SYSPATH') or die('No direct access allowed.');
 
 return array(
-	'etags' => false,
+	'ETags' => true,
 	'types' => array(
 		'text/plain',
 		'text/html',
@@ -19,4 +19,5 @@ return array(
 		'ISO-8859-1',
 	),
 	'strict' => true,
+	'max-age' => 31536000, //for gets
 );

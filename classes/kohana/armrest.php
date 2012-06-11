@@ -241,4 +241,9 @@ class Kohana_ArmREST {
 		//Return the XML results
 		return $xml->outputMemory(true); 
 	}
+	
+	public static function last_modified($object)
+	{
+		return isset($object->amended) ? gmdate("D, d M Y H:i:s",$object->amended)." GMT" : gmdate("D, d M Y H:i:s")." GMT";
+	}
 }

@@ -10,13 +10,13 @@
  *
  * @subpackage Init File
  */
-Route::set('armrest.rels', 'api/rels/<id>')
+Route::set('armrest.rels', 'armest/rels/<id>')
 ->defaults(array(
 	'directory'  => 'armrest',
 	'controller' =>	'rels',
 	'action'     => 'index',
 ));
-Route::set('armrest', 'api/<controller>(/<id>(/<relation>(/<relation_id>)))')
+Route::set('armrest', 'armrest/<controller>(/<id>(/<relation>(/<relation_id>)))')
 ->defaults(array(
 	'controller'=>	'armrest',
 	'action'     => 'index',

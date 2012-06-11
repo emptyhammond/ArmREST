@@ -81,6 +81,10 @@ abstract class Kohana_Controller_REST extends Controller {
 		{
 			$this->response->headers('cache-control', 'no-cache, no-store, max-age=0, must-revalidate');
 		}
+		else
+		{
+			$this->response->headers('cache-control', 'max-age='.Kohana::$config->load('armrest.max-age').', public, must-revalidate');	
+		}
 	}
 
 	/**

@@ -53,6 +53,14 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 	protected $_accept_strict;
 	
 	/**
+	 * _config
+	 * 
+	 * @var mixed
+	 * @access protected
+	 */
+	protected $_config;
+	
+	/**
 	 * output
 	 * 
 	 * @var mixed
@@ -103,6 +111,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 		$this->_accept_langs = $this->_config['langs'];
 		$this->_accept_charset = $this->_config['charset'];
 		$this->_accept_strict = $this->_config['strict'];
+		$this->_config = Kohana::$config->load('armrest');
 		
 		parent::__construct($request, $response, $accept, $accept_charset, $accept_language, $accept_strict);
 	}
@@ -177,13 +186,17 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 				throw new Http_Exception_400('Bad Request');
 			}
 			
-			unset($relation->id); //we don't need it - we know which resource we requested
 			
 			$link = array('link' => array('rel' => Route::url('armrest.rels', array('id' => 'self'), true), 'href' => Route::url('armrest', array('controller' => $this->_table, 'id' => $relation->id), true)));
+			
+			unset($relation->id); //we don't need it - we know which resource we requested
 			
 			$this->_collection = false;
 			
 			$this->response->status(200); //response with a 200
+
+			$this->response->headers('Last-Modified', Armrest::last_modified($resource));
+					
 			Log::instance()->add(Log::INFO,'MESSAGE HERE');
 			
 			$this->output = array(array_merge($relation->as_array(), $link)); //output = array of requested relation resource
@@ -241,33 +254,39 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			}
 
 			$this->response->status(200);
+			
+			$this->response->headers('Last-Modified', Armrest::last_modified($resource));
+	
 			Log::instance()->add(Log::INFO,'MESSAGE HERE');
 			
+			//echo View::factory('profiler/stats');
 			$this->output = $objects;
 		}
-		elseif ($id = $this->request->param('id') && ! $this->request->param('relation_id'))
+		elseif (($id = $this->request->param('id')) && !$this->request->param('relation_id'))
 		{
 			/*
 			A specific resource has been requested.
 			Return resource if it exists.
 			*/
-		
 			$object = ORM::factory($this->_model, $id);
-					
+			
 			if( ! $object->loaded() )
 			{
 				throw new Http_Exception_400('Bad Request');
 			}
 			
-			unset($object->id); //we don't need it - we know which page we requested
-			
-			$link = array('link' => array('rel' => Route::url('armrest.rels', array('id' => 'self'), true), 'href' => Route::url('armrest', array('controller' => $this->_table, 'id' => $id), true)));
+			$link = array('link' => array('rel' => Route::url('armrest.rels', array('id' => 'self'), true), 'href' => Route::url('armrest', array('controller' => $this->_table, 'id' => $object->id), true)));
 			
 			$this->_collection = false;
 						
 			$this->response->status(200);
+			
+			$this->response->headers('Last-Modified', Armrest::last_modified($object));
+			
 			Log::instance()->add(Log::INFO,'MESSAGE HERE');
 			
+			unset($object->id); //we don't need it - we know which page we requested
+						
 			$this->output = array(array_merge($object->as_array(), $link));
 		}
 		else
@@ -326,9 +345,17 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			$link = array('link' => array('rel' => Route::url('armrest.rels', array('id' => 'self'), true), 'href' => Route::url('armrest', array('controller' => $this->_table), true)));
 			
 			$this->response->status(200);
+			
+			$this->response->headers('Last-Modified', Armrest::last_modified($object));
+			
 			Log::instance()->add(Log::INFO,'MESSAGE HERE');
 			
 			$this->output = array_merge($objects, $link);
+		}
+		
+		if ($this->_config['ETags'])
+		{
+			$this->response->headers('ETag',$this->response->generate_etag());
 		}
 	}
 	
@@ -351,6 +378,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			$object->save();
 			
 			$this->response->status(201);
+			
 			Log::instance()->add(Log::INFO,'MESSAGE HERE');
 			
 			$this->output = UTF8::clean(array_merge($object->as_array(), $link = array('link' => array('rel' => Route::url('armrest.rels', array('id' => 'self'), true), 'href' => Route::url('armrest', array('controller' => $this->_table, 'id' => $object->id), true)))));
@@ -358,6 +386,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 		else
 		{
 			$this->response->status(400);
+			
 			Log::instance()->add(Log::INFO,'MESSAGE HERE');
 			
 			$this->output = array($object->validation()->errors());
@@ -404,6 +433,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 		else
 		{
 			$this->response->status(409);
+			
 			Log::instance()->add(Log::INFO,'MESSAGE HERE');
 			
 			$this->output = array('error' => $object->validation()->errors());
@@ -447,7 +477,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 	 * @return void
 	 */
 	public function after()
-	{		
+	{
 		$types = array_keys(Request::accept_type());
 		
 		if( in_array($mime = 'text/javascript', $types) or in_array($mime = 'application/json', $types) )
