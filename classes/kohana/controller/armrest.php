@@ -220,7 +220,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			
 			foreach(array_intersect_key($_GET, $columns) as $key => $value)
 			{
-				$query->and_where($key, '=', $value);
+				$query->and_where($key, 'LIKE', $value);
 			}
 			
 			if(isset($_GET['order']))
@@ -319,7 +319,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			
 			foreach(array_intersect_key($_GET, $object->list_columns()) as $key => $value)
 			{
-				$query->and_where($key, '=', $value);
+				$query->and_where($key, 'LIKE', $value);
 			}
 			
 			if(isset($_GET['order']))
@@ -480,14 +480,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 	{
 		$types = array_keys(Request::accept_type());
 		
-		if( in_array($mime = 'application/javascript', $types) or in_array($mime = 'text/javascript', $types) or in_array($mime = 'application/json', $types) )
-		{
-			$mime = 'text/javascript';
-			$this->response->headers('Content-Type', (isset($_REQUEST['callback']) ? 'text/javascript' : $mime) );			
-		
-			$this->response->body(ArmREST::json($this->output));
-		}			
-		elseif(in_array($mime = 'application/xml', $types) or in_array($mime = 'text/xml', $types))
+		if(in_array($mime = 'application/xml', $types) or in_array($mime = 'text/xml', $types))
 		{	
 			$this->response->headers('Content-Type',$mime);
 			
@@ -500,10 +493,11 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			$this->response->body(ArmREST::html($this->output));
 		}
 		else // text/plain
-		{	
-			$this->response->headers('Content-Type', 'text/plain' );			
+		{
+			$mime = 'text/javascript';
+			$this->response->headers('Content-Type', (isset($_REQUEST['callback']) ? 'text/javascript' : $mime) );			
 		
-			$this->response->body(ArmREST::text($this->output));
+			$this->response->body(ArmREST::json($this->output));
 		}
 		
 		parent::after();
