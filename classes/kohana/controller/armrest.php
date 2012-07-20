@@ -341,8 +341,6 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 				array_push($objects, UTF8::clean(array_merge($object, $link)));
 			}
 			
-			var_dump($query);
-			
 			$link = array('link' => array('rel' => Route::url('armrest.rels', array('id' => 'self'), true), 'href' => Route::url('armrest', array('controller' => $this->_table), true)));
 			
 			$this->response->status(200);
