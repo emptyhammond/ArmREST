@@ -223,9 +223,9 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 				$query->and_where($key, 'LIKE', $value);
 			}
 			
-			if(isset($_GET['order']))
+			if(isset($_GET['order_by']))
 			{	
-				foreach($_GET['order'] as $key => $value)
+				foreach($_GET['order_by'] as $key => $value)
 				{
 					$query->order_by($key, $value);
 				}
@@ -294,7 +294,6 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			/*
 			A collection of resources has been requested.
 			*/
-
 			$objects = array();
 			
 			$object = ORM::factory($this->_model);
@@ -307,7 +306,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 				
 				foreach(explode(',', $_GET['fields']) as $field)
 				{
-					$query->select($field);
+					$query->select($field);	
 				}
 			}
 			else
@@ -322,9 +321,9 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 				$query->and_where($key, 'LIKE', $value);
 			}
 			
-			if(isset($_GET['order']))
-			{	
-				foreach($_GET['order'] as $key => $value)
+			if(isset($_GET['order_by']))
+			{
+				foreach($_GET['order_by'] as $key => $value)
 				{
 					$query->order_by($key, $value);
 				}
@@ -341,6 +340,8 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 				
 				array_push($objects, UTF8::clean(array_merge($object, $link)));
 			}
+			
+			var_dump($query);
 			
 			$link = array('link' => array('rel' => Route::url('armrest.rels', array('id' => 'self'), true), 'href' => Route::url('armrest', array('controller' => $this->_table), true)));
 			
