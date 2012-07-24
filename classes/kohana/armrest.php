@@ -2,7 +2,7 @@
 
 /**
  * Kohana ArmREST helper class.
- * 
+ *
  * @package    Kohana/ArmREST
  * @author     Matthew Hammond
  * @copyright  (c) 2012 Matthew Hammond
@@ -13,11 +13,11 @@
  * Kohana_ArmREST class.
  */
 class Kohana_ArmREST {
-	
+
 	protected static $_config;
-	
+
 	private function __construct()
-	{			
+	{
 		self::$_config = Kohana::$config->load('armrest');
 	}
 
@@ -26,10 +26,10 @@ class Kohana_ArmREST {
 		//return self::$_config['types'];
 		return Kohana::$config->load('armrest.types');
 	}
-	
+
 	/**
 	 * json function.
-	 * 
+	 *
 	 * @access public
 	 * @static
 	 * @param array $array (default: array())
@@ -39,10 +39,10 @@ class Kohana_ArmREST {
 	{
 		return $array ? (string) (isset($_REQUEST['callback'])) ? $_REQUEST['callback'] . '(' .  json_encode($array) . ')' : json_encode($array) : null;
 	}
-	
+
 	/**
 	 * xml function.
-	 * 
+	 *
 	 * @access public
 	 * @static
 	 * @param array $array (default: array())
@@ -52,10 +52,10 @@ class Kohana_ArmREST {
 	{
 		return $array ? (string) self::buildXMLData($array, $startElement, $elements, null, null, $collection) : null;
 	}
-	
+
 	/**
 	 * html function.
-	 * 
+	 *
 	 * @access public
 	 * @static
 	 * @param array $array
@@ -66,9 +66,9 @@ class Kohana_ArmREST {
 		if($array)
 		{
 			$string = '';
-			
+
 			$render = function($array, &$string) use (&$render)
-			{	
+			{
 				foreach($array as $key => $value)
 				{
 					if (is_numeric($key))
@@ -98,22 +98,22 @@ class Kohana_ArmREST {
 				}
 				unset($key, $value);
 			};
-	
+
 			$render($array, $string);
-			
+
 			$string = "<ul>\r\n$string</ul>";
 		}
 		else
 		{
 			$string = null;
 		}
-		
+
 		return $string;
 	}
-	
+
 	/**
 	 * text function.
-	 * 
+	 *
 	 * @access public
 	 * @static
 	 * @param array $array
@@ -130,19 +130,19 @@ class Kohana_ArmREST {
 					$string .= (is_array($value) ? "\t" : "") . (is_numeric($key) ? '' : "$key:") . ( is_array($value) ? $render($value, $string) : $value) . "\n";
 				}
 			};
-			
+
 			$string = '';
-			
+
 			$render($array, $string);
 		}
 		else
 		{
 			$string = null;
 		}
-		
+
 		return $string;
 	}
-	
+
 	/**
 	 * Build A XML Data Set
 	 *
@@ -162,12 +162,12 @@ class Kohana_ArmREST {
 			if($this->_debug) echo $err;
 			return false; //return false error occurred
 		}
-		
+
 		$xml = new XmlWriter();
 		$xml->openMemory();
 		$xml->startDocument($xml_version, $xml_encoding);
-		
-		if( ! $collection) 
+
+		if( ! $collection)
 		{
 			$xml->startElement($elements);
 			$data = $data[0];
@@ -176,11 +176,11 @@ class Kohana_ArmREST {
 		{
 			$xml->startElement($startElement);
 		}
-		
+
 		$xml->startAttribute('xmlns');
 		$xml->text("http://www.w3.org/2005/Atom");
 		$xml->endAttribute();
-		
+
 		/**
 		* Write XML as per Associative Array
 		* @param object $xml XMLWriter Object
@@ -189,29 +189,29 @@ class Kohana_ArmREST {
 		function write(XMLWriter $xml, $data, $elements, $attributes = false)
 		{
 			foreach($data as $key => $value)
-			{	
+			{
 				if (is_numeric($key)) $key = $elements;
-				
+
 				if(is_array($value))
 				{
 					if ($key === 'link')
 					{
 						$xml->startElement('atom:link');
-						
+
 						write($xml, UTF8::clean($value), $elements, true);
 					}
 					else
 					{
 						$xml->startElement($key);
-						
+
 						write($xml, UTF8::clean($value), $elements);
 					}
-					
+
 					$xml->endElement();
-					
+
 					continue;
 				}
-				
+
 				if ($attributes)
 				{
 					// Atrributes flag has been set so add key=>value pairs as attributes
@@ -229,15 +229,15 @@ class Kohana_ArmREST {
 					//Just write it
 					$xml->writeElement($key, UTF8::clean($value));
 				}
-				
+
 			}
 		}
-		
+
 		write($xml, $data, $elements);
-		
+
 		$xml->endElement();//write end element
 		//Return the XML results
-		return $xml->outputMemory(true); 
+		return $xml->outputMemory(true);
 	}
 	
 	public static function last_modified($object)
