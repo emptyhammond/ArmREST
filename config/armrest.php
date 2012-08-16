@@ -7,6 +7,7 @@ return array(
 		'text/html',
 		'text/javascript',
 		'application/json',
+		'application/javascript',		
 		'application/xml',
 		'text/xml',
 	),
