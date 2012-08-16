@@ -220,7 +220,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			
 			foreach(array_intersect_key($_GET, $columns) as $key => $value)
 			{
-				$query->and_where($key, '=', $value);
+				$query->and_where($key, 'LIKE', $value);
 			}
 			
 			if(isset($_GET['order']))
@@ -319,7 +319,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			
 			foreach(array_intersect_key($_GET, $object->list_columns()) as $key => $value)
 			{
-				$query->and_where($key, '=', $value);
+				$query->and_where($key, 'LIKE', $value);
 			}
 			
 			if(isset($_GET['order']))
