@@ -280,30 +280,46 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 	{		
 		$types = array_keys(Request::accept_type());
 		
-		if( in_array($mime = 'text/javascript', $types) or in_array($mime = 'application/json', $types) )
-		{
-			$this->response->headers('Content-Type', (isset($_REQUEST['callback']) ? 'text/javascript' : $mime) );			
+		$contenttype = 'application/json';
 		
-			$this->response->body(ArmREST::json($this->output));
+		$output = 'No output';
+		
+		if ( in_array($mime = 'text/javascript', $types) or in_array($mime = 'application/javascript', $types) or in_array($mime = 'application/json', $types) )
+		{
+			$contenttype = (isset($_REQUEST['callback']) ? 'text/javascript' : $mime);
+		
+			$output = ArmREST::json($this->output);
 		}			
-		elseif(in_array($mime = 'application/xml', $types) or in_array($mime = 'text/xml', $types))
+		elseif (in_array($mime = 'application/xml', $types) or in_array($mime = 'text/xml', $types))
 		{
-			$this->response->headers('Content-Type',$mime);
-			$this->response->body(ArmREST::xml($this->output, $this->_table, $this->_model));
+			$contenttype = $mime;
+			
+			$output = ArmREST::xml($this->output, $this->_table, $this->_model, $this->_collection);
 		}		
-		elseif(in_array('text/html', $types))
-		{	
-			$this->response->headers('Content-Type', 'text/html' );			
-		
-			$this->response->body(ArmREST::html($this->output));
+		elseif (in_array('text/html', $types))
+		{
+			$contenttype = 'text/html';
+			$output = ArmREST::html($this->output);
 		}
 		else // text/plain
-		{	
-			$this->response->headers('Content-Type', 'text/html' );			
-		
-			$this->response->body(ArmREST::text($this->outputs));
+		{
+			$contenttype = 'text/plain';
+			$output = ArmREST::text($this->output);
 		}
 		
+		/**
+		 * Content Length needs to be set in order to prevrent null outputs on some clients
+		 */
+		$this->response->headers('Content-Length', strlen($output));
+		$this->response->headers('Content-Type', (isset($_REQUEST['callback']) ? 'text/javascript' : $mime) );
+		$this->response->body($output);
+		
 		parent::after();
+		
+		if (in_array(Arr::get($_SERVER, 'HTTP_X_HTTP_METHOD_OVERRIDE', $this->request->method()), array(
+			HTTP_Request::GET)))
+		{
+			$this->response->headers('cache-control', 'max-age='.Kohana::$config->load('armrest.max-age').', private, must-revalidate');	
+		}
 	}
 }
