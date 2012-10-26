@@ -154,7 +154,12 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			
 			foreach(array_intersect_key($_GET, $object->list_columns()) as $key => $value)
 			{
-				$query->and_where($key, '=', $value);
+				$query->and_where($key, 'LIKE', $value);
+			}
+			
+			if(isset($_GET['in']))
+			{
+				$query->and_where($object->primary_key(), 'IN', explode(',',$_GET['in']));
 			}
 			
 			if(isset($_GET['order']))
