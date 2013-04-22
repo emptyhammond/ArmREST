@@ -12,8 +12,8 @@
  */
 
 /**
- * Controller_Armrest class.
+ * Kohana_Controller_ArmREST_Rels class.
  * 
- * @extends Controller_Kohana_Armrest
+ * @extends Controller
  */
-class Controller_ArmREST extends Kohana_Controller_ArmREST {}
+class Controller_ArmREST_Rels extends Kohana_Controller_ArmREST_Rels {}

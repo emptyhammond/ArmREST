@@ -1,15 +1,23 @@
 <?php defined('SYSPATH') or die('No direct script access.');
 /**
- * ArmREST Init file
- * 
- * @package    Kohana/ArmREST
- * @category   Init
- * @author     Matthew Hammond
- * @copyright  (c) 2012 Matthew Hammond
- * @license    http://kohanaframework.org/license
+ * ArmREST Init File 
+ *
+ * @author Matthew Hammond
+ *
+ * @filesource
+ *
+ * @category Module
+ *
+ * @subpackage Init File
  */
-Route::set('ArmREST', '<controller>(/<id>)')
+Route::set('armrest.rels', 'armest/rels/<id>')
 ->defaults(array(
-	'controller' => 'ArmREST',
+	'directory'  => 'armrest',
+	'controller' =>	'rels',
+	'action'     => 'index',
+));
+Route::set('armrest', 'armrest/<controller>(/<id>(/<relation>(/<relation_id>)))')
+->defaults(array(
+	'controller'=>	'armrest',
 	'action'     => 'index',
 ));

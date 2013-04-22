@@ -24,14 +24,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 	 * @var mixed
 	 * @access protected
 	 */
-	protected $_accept = array(
-		'text/plain',
-		'text/html',
-		'text/javascript',
-		'application/json',
-		'application/xml',
-		'text/xml'
-	);
+	protected $_accept;
 	
 	/**
 	 * _accept_lang
@@ -39,10 +32,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 	 * @var mixed
 	 * @access protected
 	 */
-	protected $_accept_lang = array(
-		'en_US',
-		'en_GB'
-	);
+	protected $_accept_lang;
 	
 	/**
 	 * _accept_charset
@@ -50,20 +40,25 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 	 * @var mixed
 	 * @access protected
 	 */
-	protected $_accept_charset = array(
-		'utf-8',
-		'ISO-8859-1'
-	);
+	protected $_accept_charset;
 	
 	/**
 	 * _accept_strict
 	 * 
 	 * (default value: TRUE)
 	 * 
+	 * @var boolean
+	 * @access protected
+	 */
+	protected $_accept_strict;
+	
+	/**
+	 * _config
+	 * 
 	 * @var mixed
 	 * @access protected
 	 */
-	protected $_accept_strict = TRUE;
+	protected $_config;
 	
 	/**
 	 * output
@@ -76,7 +71,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 	/**
 	 * _table
 	 * 
-	 * @var mixed
+	 * @var string
 	 * @access protected
 	 */
 	protected $_table;
@@ -84,11 +79,42 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 	/**
 	 * _model
 	 * 
-	 * @var mixed
+	 * @var string
 	 * @access protected
 	 */
 	protected $_model;
 	
+	/**
+	 * _collection
+	 * 
+	 * @var boolean
+	 * @access protected
+	 */
+	protected $_collection = true;
+	
+	/**
+	 * __construct function.
+	 * 
+	 * @access public
+	 * @param Request $request
+	 * @param Response $response
+	 * @param array $accept (default: NULL)
+	 * @param array $accept_charset (default: NULL)
+	 * @param array $accept_language (default: NULL)
+	 * @param mixed $accept_strict (default: FALSE)
+	 * @return void
+	 */
+	public function __construct(Request $request, Response $response, array $accept = NULL,array $accept_charset = NULL, array $accept_language = NULL, $accept_strict = FALSE)
+	{	
+		$this->_config = Kohana::$config->load('armrest');
+		$this->_accept = $this->_config['types'];
+		$this->_accept_langs = $this->_config['langs'];
+		$this->_accept_charset = $this->_config['charset'];
+		$this->_accept_strict = $this->_config['strict'];
+		$this->_config = Kohana::$config->load('armrest');
+		
+		parent::__construct($request, $response, $accept, $accept_charset, $accept_language, $accept_strict);
+	}
 	
 	/**
 	 * before function.
@@ -100,9 +126,9 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 	{
 		parent::before();
 		
-		$this->_table = $this->request->controller();
+		$this->_model = Inflector::singular($this->request->controller());
 		
-		$this->_model = Inflector::singular($this->_table);
+		$this->_table = ORM::factory($this->_model)->table_name();
 	}
 	
 	/**
@@ -123,38 +149,95 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 	 */
 	public function action_index()
 	{
-		if($this->request->param('id'))
+		if ( ($id = $this->request->param('id')) and ($relation_id = $this->request->param('relation_id')) )
 		{
-			$object = ORM::factory($this->_model, $this->request->param('id'));
+			/*
+			A specific relation has been requested.
+			Get the relation based on the relation_id.
+			Checking if it exists and if it has a relationship with the base resource.
+			*/
+			
+			//check that base resource exists
+			$object = ORM::factory($this->_model, $id);
+			
+			//check base resource is loaded
+			if ( ! $object->loaded() )
+			{
+				throw new Http_Exception_400('Bad Request');
+			}
+			
+			//reset  _table and _model to required relation resource
+			$this->_table = $this->request->param('relation');
+			
+			$this->_model = Inflector::singular($this->_table);
+			
+			//try and get relation based on request
+			$relation = ORM::factory($this->_model, $relation_id);
+			
+			//if relation resource not loaded throw 400
+			if ( ! $relation->loaded() )
+			{
+				throw new Http_Exception_400('Bad Request');
+			}
+			
+			//if base resource doesn't have a relationship, throw a 400
+			if ( ! $object->has($this->_table, $relation))
+			{
+				throw new Http_Exception_400('Bad Request');
+			}
+			
+			$link = array('link' => array('rel' => Route::url('armrest.rels', array('id' => 'self'), true), 'href' => Route::url('armrest', array('controller' => $this->_table, 'id' => $relation->id), true)));
+			
+			unset($relation->id); //we don't need it - we know which resource we requested
+			
+			$this->_collection = false;
+			
+			$this->response->status(200); //response with a 200
+
+			$this->response->headers('Last-Modified', Armrest::last_modified($resource));
 					
-			if( ! $object->loaded() )
-			{
-				throw new Http_Exception_404(ucfirst($this->_model)." doesn't exist");
-			}
-			
-			$this->output = array($object->as_array());
+			$this->output = array(array_merge($relation->as_array(), $link)); //output = array of requested relation resource
 		}
-		else
+		elseif ( ($relation = $this->request->param('relation')) and ! $this->request->param('relation_id'))
 		{
-			$objects = array();
+			/*
+			A collection of relations has been requested.
+			Check that relationship exists.
+			*/
+			$resource = ORM::factory($this->_model, $this->request->param('id'));
 			
-			$object = ORM::factory($this->_model);
+			$this->_table = $relation;
 			
-			$query = DB::select();
+			$this->_model = Inflector::singular($this->_table);
 			
-			if(isset($_GET['fields']))
+			$columns = ORM::factory($this->_model)->list_columns();
+			
+			$query = $resource->{$this->request->param('relation')};
+						
+			foreach(array_intersect_key($_GET, $columns) as $key => $value)
 			{
-				foreach(explode(',', $_GET['fields']) as $field)
+				if (isset($_GET['inverse']))
 				{
-					$query->select($field);
+					if (strpos($value,'!') !== false)
+					{
+						$query->and_where($key, 'LIKE', str_replace('!','',$value));
+					}
+					else
+					{
+						$query->and_where($key, 'NOT LIKE', $value);
+					}
 				}
-			}
-			
-			$query->from($this->_table);
-			
-			foreach(array_intersect_key($_GET, $object->list_columns()) as $key => $value)
-			{
-				$query->and_where($key, 'LIKE', $value);
+				else
+				{
+					if (strpos($value,'!') !== false)
+					{
+						$query->and_where($key, 'NOT LIKE', str_replace('!','',$value));
+					}
+					else
+					{
+						$query->and_where($key, 'LIKE', $value);
+					}
+				}
 			}
 			
 			if(isset($_GET['in']))
@@ -175,12 +258,147 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 				$query->limit($_GET['limit']);
 			}
 			
-			foreach($query->execute()->as_array() as $object)
+			$objects = array();
+			
+			if ($query->loaded())
 			{
-				array_push($objects, UTF8::clean($object));
+				array_push($objects, UTF8::clean($query->as_array()));
 			}
+			else
+			{
+				foreach($query->find_all() as $relation)
+				{	
+					$link = array('link' => array('rel' => Route::url('armrest.rels', array('id' => 'self'), true), 'href' => Route::url('armrest', array('controller' => $this->_table, 'id' => $relation->id), true)));
+					
+					array_push($objects, UTF8::clean(array_merge_recursive($relation->as_array(), $link)));
+				}
+				unset($link, $relation);
+			}
+
+			$this->response->status(200);
+			
+			$this->response->headers('Last-Modified', Armrest::last_modified($resource));
 			
 			$this->output = $objects;
+		}
+		elseif (($id = $this->request->param('id')) and !$this->request->param('relation_id'))
+		{
+			/*
+			A specific resource has been requested.
+			Return resource if it exists.
+			*/
+			$object = ORM::factory($this->_model, $id);
+			
+			if( ! $object->loaded() )
+			{
+				throw new Http_Exception_400('Bad Request');
+			}
+			
+			//$link = array('link' => array('rel' => Route::url('armrest.rels', array('id' => 'self'), true), 'href' => Route::url('armrest', array('controller' => $this->_table, 'id' => $object->id), true)));
+			
+			$this->_collection = false;
+						
+			$this->response->status(200);
+			
+			$this->response->headers('Last-Modified', Armrest::last_modified($object));
+			
+			unset($object->id); //we don't need it - we know which page we requested
+						
+			//$this->output = array(array_merge($object->as_array(), $link));
+			$this->output = $object->as_array();
+		}
+		else
+		{
+			/*
+			A collection of resources has been requested.
+			*/
+			$objects = array();
+			
+			$object = ORM::factory($this->_model);
+			
+			$query = DB::select();
+			
+			if(isset($_GET['fields']))
+			{
+				$query->select('id');
+				
+				foreach(explode(',', $_GET['fields']) as $field)
+				{
+					$query->select($field);
+				}
+			}
+			else
+			{
+				$query->select('*');
+			}
+			
+			$query->from($this->_table);
+
+			foreach(array_intersect_key($_GET, $object->list_columns()) as $key => $value)
+			{			
+				if (isset($_GET['inverse']))
+				{
+					if (strpos($value,'!') !== false)
+					{
+						$query->and_where($key, 'LIKE', str_replace('!','',$value));
+					}
+					else
+					{
+						$query->and_where($key, 'NOT LIKE', $value);
+					}
+				}
+				else
+				{
+					if (strpos($value,'!') !== false)
+					{
+						$query->and_where($key, 'NOT LIKE', str_replace('!','',$value));
+					}
+					else
+					{
+						$query->and_where($key, 'LIKE', $value);
+					}
+				}
+			}
+			unset($key,$value);			
+			
+			if(isset($_GET['in']))
+			{
+				$query->and_where($object->primary_key(), 'IN', explode(',',$_GET['in']));
+			}
+			
+			if(isset($_GET['order']))
+			{	
+				foreach($_GET['order'] as $key => $value)
+				{
+					$query->order_by($key, $value);
+				}
+				unset($key,$value);
+			}
+			
+			if(isset($_GET['limit']))
+			{
+				$query->limit($_GET['limit']);
+			}
+			
+			foreach($query->execute()->as_array() as $object)
+			{
+				$link = array('link' => array('rel' => Route::url('armrest.rels', array('id' => 'self'), true), 'href' => Route::url('armrest', array('controller' => $this->_table, 'id' => $object['id']), true)));
+				
+				$objects[] = UTF8::clean(array_merge($object, $link));
+			}
+			
+			//$link = array('link' => array('rel' => Route::url('armrest.rels', array('id' => 'self'), true), 'href' => Route::url('armrest', array('controller' => $this->_table), true)));
+			
+			$this->response->status(200);
+			
+			$this->response->headers('Last-Modified', Armrest::last_modified($object));
+			
+			$this->output = $objects;
+		}
+		
+		if ($this->_config['ETags'])
+		{
+			$this->response->headers('ETag',$this->response->generate_etag());
 		}
 	}
 	
@@ -202,10 +420,18 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 		{
 			$object->save();
 			
-			$this->output = $object->as_array();
+			$this->response->status(201);
+			
+			Log::instance()->add(Log::INFO,'MESSAGE HERE');
+			
+			$this->output = UTF8::clean(array_merge($object->as_array(), $link = array('link' => array('rel' => Route::url('armrest.rels', array('id' => 'self'), true), 'href' => Route::url('armrest', array('controller' => $this->_table, 'id' => $object->id), true)))));
 		}
 		else
 		{
+			$this->response->status(400);
+			
+			Log::instance()->add(Log::INFO,'MESSAGE HERE');
+			
 			$this->output = array($object->validation()->errors());
 		}
 	}
@@ -224,7 +450,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 		
 		if( ! $object->loaded() )
 		{
-			throw new Http_Exception_404(ucfirst($this->_model)." doesn't exist");
+			throw new Http_Exception_400('Bad Request');
 		}
 				
 		$putdata = '';
@@ -235,7 +461,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			$putdata .= $data;
         }
 		
-		$array = $putdata ? json_decode($putdata,true) : array();
+		$array = $putdata ? json_decode($putdata,true) : array(); //TODO: Handle XML and other format requests
 		
 		$object->values($array);
 		
@@ -243,10 +469,16 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 		{
 			$object->update();
 			
+			unset($object->id); //we don't need it - we know which page we requested
+			
 			$this->output = $object->as_array();
 		}
 		else
 		{
+			$this->response->status(409);
+			
+			Log::instance()->add(Log::INFO,'MESSAGE HERE');
+			
 			$this->output = array('error' => $object->validation()->errors());
 		}
 	}
@@ -265,14 +497,20 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 		
 		if( ! $object->loaded() )
 		{
-			throw new Http_Exception_404(ucfirst($this->_model)." doesn't exist");
+			throw new Http_Exception_400('Bad Request');
 		}
 		
-		$id = $object->id;
-		
+		/** 
+		 * If user isn't allowed to delete
+		 * return $this->response->status(405);
+		 * and don't do the delete
+		 * else...
+		**/		
 		$object->delete();
-		
-		$this->output = array('response' => ucfirst($this->_model)." id:$id deleted successfully");
+		$this->response->status(204);
+		Log::instance()->add(Log::INFO,$this->request->param('id').' deleted');
+
+		$this->output = $this->request->param('id').' deleted';
 	}
 	
 	/**
@@ -282,14 +520,14 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 	 * @return void
 	 */
 	public function after()
-	{		
+	{
 		$types = array_keys(Request::accept_type());
 		
 		$contenttype = 'application/json';
 		
 		$output = 'No output';
 		
-		if ( in_array($mime = 'text/javascript', $types) or in_array($mime = 'application/javascript', $types) or in_array($mime = 'application/json', $types) )
+		if (in_array($mime = 'text/javascript', $types) or in_array($mime = 'application/javascript', $types))
 		{
 			$contenttype = (isset($_REQUEST['callback']) ? 'text/javascript' : $mime);
 		
@@ -308,8 +546,9 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 		}
 		else // text/plain
 		{
-			$contenttype = 'text/plain';
-			$output = ArmREST::text($this->output);
+			$contenttype = (isset($_REQUEST['callback']) ? 'application/json' : $mime);
+		
+			$output = ArmREST::json($this->output);
 		}
 		
 		/**
@@ -318,13 +557,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 		$this->response->headers('Content-Length', strlen($output));
 		$this->response->headers('Content-Type', (isset($_REQUEST['callback']) ? 'text/javascript' : $mime) );
 		$this->response->body($output);
-		
+
 		parent::after();
-		
-		if (in_array(Arr::get($_SERVER, 'HTTP_X_HTTP_METHOD_OVERRIDE', $this->request->method()), array(
-			HTTP_Request::GET)))
-		{
-			$this->response->headers('cache-control', 'max-age='.Kohana::$config->load('armrest.max-age').', private, must-revalidate');	
-		}
 	}
 }

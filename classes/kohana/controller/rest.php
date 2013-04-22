@@ -73,7 +73,7 @@ abstract class Kohana_Controller_REST extends Controller {
 	 * undocumented function
 	 */
 	public function after()
-	{
+	{	
 		if (in_array(Arr::get($_SERVER, 'HTTP_X_HTTP_METHOD_OVERRIDE', $this->request->method()), array(
 			HTTP_Request::PUT,
 			HTTP_Request::POST,
@@ -81,6 +81,12 @@ abstract class Kohana_Controller_REST extends Controller {
 		{
 			$this->response->headers('cache-control', 'no-cache, no-store, max-age=0, must-revalidate');
 		}
+		else
+		{
+			$this->response->headers('cache-control', 'max-age='.Kohana::$config->load('armrest.max-age').', public, must-revalidate');	
+		}
+
+		return parent::after();
 	}
 
 	/**
