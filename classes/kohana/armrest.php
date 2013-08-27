@@ -37,8 +37,14 @@ class Kohana_ArmREST {
 	 */
 	public static function json($array = array())
 	{
-		
-		return $array ? (isset($_REQUEST['callback']) ? $_REQUEST['callback'] . '(' .  json_encode($array,JSON_NUMERIC_CHECK) . ')' : json_encode($array,JSON_NUMERIC_CHECK)) : null;
+		if (isset(JSON_NUMERIC_CHECK))
+		{
+			return $array ? (isset($_REQUEST['callback']) ? $_REQUEST['callback'] . '(' .  json_encode($array,JSON_NUMERIC_CHECK) . ')' : json_encode($array,JSON_NUMERIC_CHECK)) : null;
+		}
+		else
+		{
+			return $array ? (isset($_REQUEST['callback']) ? $_REQUEST['callback'] . '(' .  json_encode($array) . ')' : json_encode($array)) : null;
+		}	
 	}
 	
 	/**
