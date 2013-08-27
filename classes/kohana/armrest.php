@@ -37,7 +37,7 @@ class Kohana_ArmREST {
 	 */
 	public static function json($array = array())
 	{
-		if (isset(JSON_NUMERIC_CHECK))
+		if (defined(JSON_NUMERIC_CHECK))
 		{
 			return $array ? (isset($_REQUEST['callback']) ? $_REQUEST['callback'] . '(' .  json_encode($array,JSON_NUMERIC_CHECK) . ')' : json_encode($array,JSON_NUMERIC_CHECK)) : null;
 		}
