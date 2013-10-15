@@ -218,24 +218,52 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			{
 				if (isset($_GET['inverse']))
 				{
-					if (strpos($value,'!') !== false)
+					if (is_numeric($value))
 					{
-						$query->and_where($key, 'LIKE', str_replace('!','',$value));
+						if (strpos($value,'!') !== false)
+						{
+							$query->and_where($key, '=', str_replace('!','',$value));
+						}
+						else
+						{
+							$query->and_where($key, '<>', $value);
+						}						
 					}
 					else
 					{
-						$query->and_where($key, 'NOT LIKE', $value);
+						if (strpos($value,'!') !== false)
+						{
+							$query->and_where($key, 'LIKE', '%'.str_replace('!','',$value).'%');
+						}
+						else
+						{
+							$query->and_where($key, 'NOT LIKE', '%'.$value.'%');
+						}
 					}
 				}
 				else
 				{
-					if (strpos($value,'!') !== false)
+					if (is_numeric($value))
 					{
-						$query->and_where($key, 'NOT LIKE', str_replace('!','',$value));
+						if (strpos($value,'!') !== false)
+						{
+							$query->and_where($key, '<>', str_replace('!','',$value));
+						}
+						else
+						{
+							$query->and_where($key, '=', $value);
+						}
 					}
 					else
 					{
-						$query->and_where($key, 'LIKE', $value);
+						if (strpos($value,'!') !== false)
+						{
+							$query->and_where($key, 'NOT LIKE', '%'.str_replace('!','',$value).'%');
+						}
+						else
+						{
+							$query->and_where($key, 'LIKE', '%'.$value.'%');
+						}						
 					}
 				}
 			}
@@ -335,27 +363,55 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			$query->from($this->_table);
 
 			foreach(array_intersect_key($_GET, $object->list_columns()) as $key => $value)
-			{			
+			{
 				if (isset($_GET['inverse']))
 				{
-					if (strpos($value,'!') !== false)
+					if (is_numeric($value))
 					{
-						$query->and_where($key, 'LIKE', str_replace('!','',$value));
+						if (strpos($value,'!') !== false)
+						{
+							$query->and_where($key, '=', str_replace('!','',$value));
+						}
+						else
+						{
+							$query->and_where($key, '<>', $value);
+						}						
 					}
 					else
 					{
-						$query->and_where($key, 'NOT LIKE', $value);
+						if (strpos($value,'!') !== false)
+						{
+							$query->and_where($key, 'LIKE', '%'.str_replace('!','',$value).'%');
+						}
+						else
+						{
+							$query->and_where($key, 'NOT LIKE', '%'.$value.'%');
+						}
 					}
 				}
 				else
 				{
-					if (strpos($value,'!') !== false)
+					if (is_numeric($value))
 					{
-						$query->and_where($key, 'NOT LIKE', str_replace('!','',$value));
+						if (strpos($value,'!') !== false)
+						{
+							$query->and_where($key, '<>', str_replace('!','',$value));
+						}
+						else
+						{
+							$query->and_where($key, '=', $value);
+						}
 					}
 					else
 					{
-						$query->and_where($key, 'LIKE', $value);
+						if (strpos($value,'!') !== false)
+						{
+							$query->and_where($key, 'NOT LIKE', '%'.str_replace('!','',$value).'%');
+						}
+						else
+						{
+							$query->and_where($key, 'LIKE', '%'.$value.'%');
+						}						
 					}
 				}
 			}
@@ -394,11 +450,6 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			$this->response->headers('Last-Modified', Armrest::last_modified($object));
 			
 			$this->output = $objects;
-		}
-		
-		if ($this->_config['ETags'])
-		{
-			$this->response->headers('ETag',$this->response->generate_etag());
 		}
 	}
 	
