@@ -194,7 +194,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			
 			$this->response->status(200); //response with a 200
 
-			$this->response->headers('Last-Modified', Armrest::last_modified($resource));
+			$this->response->headers('Last-Modified', ArmREST::last_modified($resource));
 					
 			$this->output = array(array_merge($relation->as_array(), $link)); //output = array of requested relation resource
 		}
@@ -305,7 +305,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 
 			$this->response->status(200);
 			
-			$this->response->headers('Last-Modified', Armrest::last_modified($resource));
+			$this->response->headers('Last-Modified', ArmREST::last_modified($resource));
 			
 			$this->output = $objects;
 		}
@@ -328,7 +328,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 						
 			$this->response->status(200);
 			
-			$this->response->headers('Last-Modified', Armrest::last_modified($object));
+			$this->response->headers('Last-Modified', ArmREST::last_modified($object));
 			
 			unset($object->id); //we don't need it - we know which page we requested
 						
@@ -447,7 +447,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 			
 			$this->response->status(200);
 			
-			$this->response->headers('Last-Modified', Armrest::last_modified($object));
+			$this->response->headers('Last-Modified', ArmREST::last_modified($object));
 			
 			$this->output = $objects;
 		}
