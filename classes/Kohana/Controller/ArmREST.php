@@ -126,7 +126,7 @@ class Kohana_Controller_ArmREST extends Controller_REST {
 	{
 		parent::before();
 		
-		$this->_model = Inflector::singular($this->request->controller());
+		$this->_model = ucfirst(Inflector::singular($this->request->controller()));
 		
 		$this->_table = ORM::factory($this->_model)->table_name();
 	}
